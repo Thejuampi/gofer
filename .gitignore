@@ -1,0 +1,21 @@
+# Compiled binaries
+gofer
+gofer.exe
+*.exe
+*.test
+
+# Build output
+dist/
+
+# Go test/coverage artifacts
+coverage.out
+*.cover.out
+cpu.prof
+mem.prof
+
+# IDE / OS
+.idea/
+.vscode/settings.json
+*.code-workspace
+.DS_Store
+Thumbs.db

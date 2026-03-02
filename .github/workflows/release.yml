@@ -1,0 +1,152 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing release tag to publish (e.g., v0.1.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
+    steps:
+      - name: Checkout gofer
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}
+
+      - name: Checkout amps-client-go (sibling, for fakeamps + replace directive)
+        uses: actions/checkout@v4
+        with:
+          repository: Thejuampi/amps-client-go
+          path: ${{ github.workspace }}/../amps-client-go
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Validate tag matches VERSION
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${RELEASE_TAG#v}"
+          VERSION_FILE="$(tr -d '[:space:]' < VERSION)"
+          if [[ "$TAG" != "$VERSION_FILE" ]]; then
+            echo "Tag/version mismatch: tag=$TAG VERSION=$VERSION_FILE"
+            exit 1
+          fi
+
+      - name: Go vet
+        run: go vet ./...
+
+      - name: Build
+        run: go build ./...
+
+      - name: Integration tests
+        run: go test -count=1 -timeout 120s .
+
+  build-binaries:
+    needs: validate
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            asset: gofer-linux-amd64
+          - goos: linux
+            goarch: arm64
+            asset: gofer-linux-arm64
+          - goos: darwin
+            goarch: amd64
+            asset: gofer-darwin-amd64
+          - goos: darwin
+            goarch: arm64
+            asset: gofer-darwin-arm64
+          - goos: windows
+            goarch: amd64
+            asset: gofer-windows-amd64.exe
+    steps:
+      - name: Checkout gofer
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}
+
+      - name: Checkout amps-client-go (for replace directive)
+        uses: actions/checkout@v4
+        with:
+          repository: Thejuampi/amps-client-go
+          path: ${{ github.workspace }}/../amps-client-go
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "0"
+        run: go build -ldflags="-s -w -X main.version=${RELEASE_TAG}" -o ${{ matrix.asset }} .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: ${{ matrix.asset }}
+
+  release:
+    needs: build-binaries
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}
+
+      - name: Download all binaries
+        uses: actions/download-artifact@v4
+        with:
+          path: dist/
+
+      - name: Flatten dist directory
+        run: |
+          for f in dist/*/*; do mv "$f" "dist/$(basename $f)"; done
+          ls dist/
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          generate_release_notes: true
+          files: dist/*
+
+      - name: Warm Go proxy and pkg.go.dev (non-blocking)
+        shell: bash
+        run: |
+          set +e
+          URLS=(
+            "https://proxy.golang.org/github.com/Thejuampi/gofer/@v/${RELEASE_TAG}.info"
+            "https://pkg.go.dev/github.com/Thejuampi/gofer@${RELEASE_TAG}"
+          )
+          for URL in "${URLS[@]}"; do
+            echo "Requesting ${URL}"
+            curl -fsS --retry 3 --retry-delay 2 "${URL}" || true
+          done
+          exit 0
