@@ -25,12 +25,6 @@ jobs:
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}
 
-      - name: Checkout amps-client-go (sibling, for fakeamps + replace directive)
-        uses: actions/checkout@v4
-        with:
-          repository: Thejuampi/amps-client-go
-          path: ${{ github.workspace }}/../amps-client-go
-
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
@@ -84,12 +78,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}
-
-      - name: Checkout amps-client-go (for replace directive)
-        uses: actions/checkout@v4
-        with:
-          repository: Thejuampi/amps-client-go
-          path: ${{ github.workspace }}/../amps-client-go
 
       - name: Setup Go
         uses: actions/setup-go@v5

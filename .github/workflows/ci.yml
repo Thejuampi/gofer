@@ -18,12 +18,6 @@ jobs:
       - name: Checkout gofer
         uses: actions/checkout@v4
 
-      - name: Checkout amps-client-go (sibling, for fakeamps + replace directive)
-        uses: actions/checkout@v4
-        with:
-          repository: Thejuampi/amps-client-go
-          path: ${{ github.workspace }}/../amps-client-go
-
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
