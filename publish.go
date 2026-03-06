@@ -1,18 +1,24 @@
 package main
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
+	"io"
 	"os"
-	"strings"
+	"strconv"
+	"time"
 )
 
 func runPublish(args []string) error {
 	fs := flag.NewFlagSet("publish", flag.ContinueOnError)
-	server := fs.String("server", "", "AMPS URI")
+	var transport transportOptions
+	addTransportFlags(fs, &transport, true)
 	topic := fs.String("topic", "", "destination topic")
 	data := fs.String("data", "", "message payload (if empty, reads from stdin)")
+	filePath := fs.String("file", "", "file to publish records from")
+	delimiter := fs.String("delimiter", "10", "decimal message delimiter")
+	delta := fs.Bool("delta", false, "use delta publish")
+	rate := fs.Float64("rate", 0, "messages per second")
 	timeout := fs.Duration("timeout", defaultTimeout, "connection timeout")
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -22,36 +28,53 @@ func runPublish(args []string) error {
 		return fmt.Errorf("topic is required (-topic flag)")
 	}
 
-	client, err := connect(*server, *timeout)
+	delimiterValue, err := strconv.Atoi(*delimiter)
+	if err != nil || delimiterValue < 0 || delimiterValue > 255 {
+		return fmt.Errorf("delimiter must be a decimal byte value")
+	}
+
+	client, _, err := connect(transport, *timeout)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = client.Close() }()
 
-	// Single-message mode via -data flag.
+	var payload []byte
 	if *data != "" {
-		return client.Publish(*topic, *data)
+		payload = []byte(*data)
+	} else if *filePath != "" {
+		payload, err = os.ReadFile(*filePath)
+		if err != nil {
+			return fmt.Errorf("read file: %w", err)
+		}
+	} else {
+		payload, err = io.ReadAll(os.Stdin)
+		if err != nil {
+			return fmt.Errorf("reading stdin: %w", err)
+		}
 	}
 
-	// Streaming mode: read lines from stdin.
-	scanner := bufio.NewScanner(os.Stdin)
-	scanner.Buffer(make([]byte, 0, 1024*1024), 1024*1024)
-	count := 0
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" {
-			continue
+	var started = time.Now()
+	var pacer = newPublishPacer(*rate, time.Now, time.Sleep)
+	var records = splitRecords(payload, byte(delimiterValue))
+	for index, record := range records {
+		pacer.Wait()
+		if *delta {
+			err = client.DeltaPublishBytes(*topic, record)
+		} else {
+			err = client.Publish(*topic, string(record))
 		}
-		if err := client.Publish(*topic, line); err != nil {
-			return fmt.Errorf("publish message #%d: %w", count+1, err)
+		if err != nil {
+			return fmt.Errorf("publish message #%d: %w", index+1, err)
 		}
-		count++
 	}
-	if err := scanner.Err(); err != nil {
-		return fmt.Errorf("reading stdin: %w", err)
+	if len(records) > 0 {
+		if err := client.Flush(); err != nil {
+			return fmt.Errorf("flush publish pipeline: %w", err)
+		}
 	}
 
-	fmt.Fprintf(writer, "published %d message(s)\n", count)
+	writeSummary("total messages published:", len(records), started)
 	flushOutput()
 	return nil
 }

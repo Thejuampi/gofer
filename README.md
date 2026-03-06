@@ -11,6 +11,7 @@
 **gofer** is a cross-platform CLI for interacting with [AMPS](https://www.cranktheamps.com/) instances.
 It compiles to a single native binary with zero external dependencies, built on top of
 [amps-client-go](https://github.com/Thejuampi/amps-client-go) — the high-performance Go AMPS client.
+Its command surface is aligned with the six-command `spark` utility documented by 60East.
 
 ---
 
@@ -37,31 +38,34 @@ Or download a pre-built binary from [Releases](https://github.com/Thejuampi/gofe
 
 Run `gofer <command> -help` for flag details.
 
+Spark compatibility details live in [docs/spark_parity_matrix.md](docs/spark_parity_matrix.md).
+
 ---
 
 ## Quick Start
 
 ```bash
 # Check connectivity
-gofer ping -server tcp://localhost:9007/amps/json
+gofer ping -server localhost:9007 -type json
 
-# Publish
-gofer publish -server tcp://localhost:9007/amps/json -topic orders -data '{"id":1}'
+# Publish from stdin or a file
+gofer publish -server localhost:9007 -type json -topic orders -data '{"id":1}'
+gofer publish -server localhost:9007 -type json -topic orders -file data.jsonl
 
 # Subscribe (stream until Ctrl-C)
-gofer subscribe -server tcp://localhost:9007/amps/json -topic orders
+gofer subscribe -server localhost:9007 -type json -topic orders
 
 # Subscribe, receive exactly 5 messages and exit
-gofer subscribe -server tcp://localhost:9007/amps/json -topic orders -n 5
+gofer subscribe -server localhost:9007 -type json -topic orders -n 5 -format '{data}'
 
 # SOW query
-gofer sow -server tcp://localhost:9007/amps/json -topic orders -filter '/id > 10'
+gofer sow -server localhost:9007 -type json -topic orders -filter '/id > 10' -orderby '/id desc' -topn 10
 
 # SOW + live subscription (stop after 20 messages)
-gofer sow_and_subscribe -server tcp://localhost:9007/amps/json -topic orders -n 20
+gofer sow_and_subscribe -server localhost:9007 -type json -topic orders -delta -n 20
 
 # Delete from SOW
-gofer sow_delete -server tcp://localhost:9007/amps/json -topic orders -filter '/id = 1'
+gofer sow_delete -server localhost:9007 -type json -topic orders -filter '/id = 1'
 ```
 
 ---

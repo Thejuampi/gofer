@@ -113,6 +113,26 @@ func (e *testEnv) runGofer(t *testing.T, args ...string) (stdout string, stderr 
 	return outBuf.String(), errBuf.String(), exitCode
 }
 
+func (e *testEnv) runGoferWithInput(t *testing.T, input string, args ...string) (stdout string, stderr string, exitCode int) {
+	t.Helper()
+	cmd := exec.Command(e.goferBin, args...)
+	var outBuf, errBuf strings.Builder
+	cmd.Stdout = &outBuf
+	cmd.Stderr = &errBuf
+	cmd.Stdin = strings.NewReader(input)
+
+	err := cmd.Run()
+	exitCode = 0
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			exitCode = exitErr.ExitCode()
+		} else {
+			t.Fatalf("exec gofer: %v", err)
+		}
+	}
+	return outBuf.String(), errBuf.String(), exitCode
+}
+
 // repoRoot walks up from the working directory to find this module's go.mod.
 func repoRoot(t *testing.T) string {
 	t.Helper()
@@ -160,8 +180,23 @@ func TestPing(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("ping exit code = %d, stderr = %s", code, stderr)
 	}
-	if !strings.HasPrefix(stdout, "OK") {
-		t.Fatalf("ping output = %q, want prefix 'OK'", stdout)
+	if !strings.Contains(stdout, "Successfully connected to") {
+		t.Fatalf("ping output = %q, want success message", stdout)
+	}
+}
+
+func TestPingBareServerWithType(t *testing.T) {
+	env := setupTestEnv(t)
+
+	stdout, stderr, code := env.runGofer(t, "ping", "-server", env.addr, "-type", "json")
+	if code != 0 {
+		t.Fatalf("ping exit code = %d, stderr = %s", code, stderr)
+	}
+	if !strings.Contains(stdout, "Successfully connected to tcp://") {
+		t.Fatalf("ping output = %q, want canonical URI success output", stdout)
+	}
+	if !strings.Contains(stdout, "/amps/json") {
+		t.Fatalf("ping output = %q, want canonical JSON message type URI", stdout)
 	}
 }
 
@@ -327,6 +362,64 @@ func TestSOWDelete(t *testing.T) {
 	}
 	if strings.Contains(stdout, `"deleteme"`) {
 		t.Fatalf("sow should be empty after delete, got: %q", stdout)
+	}
+}
+
+func TestPublishFileWithCustomDelimiter(t *testing.T) {
+	env := setupTestEnv(t)
+
+	inputPath := filepath.Join(t.TempDir(), "publish.txt")
+	if err := os.WriteFile(inputPath, []byte(`{"id":1}|{"id":2}|`), 0o600); err != nil {
+		t.Fatalf("write publish file: %v", err)
+	}
+
+	_, stderr, code := env.runGofer(t,
+		"publish", "-server", env.addr, "-type", "json", "-topic", "file.gofer",
+		"-file", inputPath, "-delimiter", "124",
+	)
+	if code != 0 {
+		t.Fatalf("publish exit code = %d, stderr = %s", code, stderr)
+	}
+
+	stdout, stderr, code := env.runGofer(t,
+		"sow", "-server", env.addr, "-type", "json", "-topic", "file.gofer",
+	)
+	if code != 0 {
+		t.Fatalf("sow exit code = %d, stderr = %s", code, stderr)
+	}
+	if !strings.Contains(stdout, `"id":1`) || !strings.Contains(stdout, `"id":2`) {
+		t.Fatalf("sow output = %q, want both published records", stdout)
+	}
+}
+
+func TestSOWDeleteDefaultsToDeleteAll(t *testing.T) {
+	env := setupTestEnv(t)
+
+	_, stderr, code := env.runGofer(t,
+		"publish", "-server", env.uri, "-topic", "sowdel.all", "-data", `{"id":1,"delete":"all"}`,
+	)
+	if code != 0 {
+		t.Fatalf("seed publish exit code = %d, stderr = %s", code, stderr)
+	}
+
+	stdout, stderr, code := env.runGofer(t,
+		"sow_delete", "-server", env.addr, "-type", "json", "-topic", "sowdel.all",
+	)
+	if code != 0 {
+		t.Fatalf("sow_delete exit code = %d, stderr = %s", code, stderr)
+	}
+	if !strings.Contains(strings.ToLower(stdout), "deleted") {
+		t.Fatalf("sow_delete output = %q, want delete summary", stdout)
+	}
+
+	stdout, stderr, code = env.runGofer(t,
+		"sow", "-server", env.addr, "-type", "json", "-topic", "sowdel.all",
+	)
+	if code != 0 {
+		t.Fatalf("verification sow exit code = %d, stderr = %s", code, stderr)
+	}
+	if strings.Contains(stdout, `"delete":"all"`) {
+		t.Fatalf("sow should be empty after default delete, got: %q", stdout)
 	}
 }
 
