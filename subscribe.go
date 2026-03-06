@@ -18,7 +18,7 @@ func runSubscribe(args []string) error {
 	topic := fs.String("topic", "", "topic to subscribe to")
 	filter := fs.String("filter", "", "content filter expression")
 	copyServer := fs.String("copy", "", "secondary server for mirrored output")
-	format := fs.String("format", "", "spark-style output format")
+	format := fs.String("format", "", "output format template")
 	delta := fs.Bool("delta", false, "use delta subscription")
 	ack := fs.Bool("ack", false, "enable auto-ack for queue messages")
 	backlog := fs.Bool("backlog", false, "request backlog when reading from queues")

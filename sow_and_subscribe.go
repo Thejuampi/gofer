@@ -19,7 +19,7 @@ func runSOWAndSubscribe(args []string) error {
 	topic := fs.String("topic", "", "SOW topic")
 	filter := fs.String("filter", "", "content filter expression")
 	copyServer := fs.String("copy", "", "secondary server for mirrored output")
-	format := fs.String("format", "", "spark-style output format")
+	format := fs.String("format", "", "output format template")
 	delta := fs.Bool("delta", false, "request delta subscription")
 	batchSize := fs.String("batchsize", "", "query batch size")
 	orderBy := fs.String("orderby", "", "query ordering")

@@ -13,12 +13,12 @@ import (
 	kerberosauth "github.com/Thejuampi/amps-client-go/amps/auth/kerberos"
 )
 
-type sparkBool struct {
+type compatBool struct {
 	set   bool
 	value bool
 }
 
-func (value *sparkBool) String() string {
+func (value *compatBool) String() string {
 	if value == nil {
 		return "false"
 	}
@@ -28,8 +28,8 @@ func (value *sparkBool) String() string {
 	return "false"
 }
 
-func (value *sparkBool) Set(raw string) error {
-	parsed, err := parseSparkBool(raw)
+func (value *compatBool) Set(raw string) error {
+	parsed, err := parseCompatBool(raw)
 	if err != nil {
 		return err
 	}
@@ -38,7 +38,7 @@ func (value *sparkBool) Set(raw string) error {
 	return nil
 }
 
-func parseSparkBool(raw string) (bool, error) {
+func parseCompatBool(raw string) (bool, error) {
 	switch strings.ToLower(strings.TrimSpace(raw)) {
 	case "1", "t", "true", "y", "yes":
 		return true, nil
@@ -56,7 +56,7 @@ type transportOptions struct {
 	uriopts          string
 	urischeme        string
 	authenticatorRaw string
-	secure           sparkBool
+	secure           compatBool
 }
 
 func addTransportFlags(fs *flag.FlagSet, options *transportOptions, includeAuthenticator bool) {

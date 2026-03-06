@@ -38,7 +38,7 @@ Or download a pre-built binary from [Releases](https://github.com/Thejuampi/gofe
 
 Run `gofer <command> -help` for flag details.
 
-Spark compatibility details live in [docs/spark_parity_matrix.md](docs/spark_parity_matrix.md).
+Official `spark` parity details live in [docs/official_cli_parity.md](docs/official_cli_parity.md).
 
 ---
 

@@ -1,6 +1,5 @@
 // Package main implements gofer — a cross-platform CLI for interacting with
-// AMPS instances. It provides feature parity with 60east's official spark
-// utility but compiles to a single native binary with zero external
+// AMPS instances. It compiles to a single native binary with zero external
 // dependencies beyond the amps-client-go package.
 package main
 

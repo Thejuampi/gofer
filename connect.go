@@ -23,7 +23,7 @@ func connect(options transportOptions, timeout time.Duration) (*amps.Client, str
 	}
 
 	// Use a unique client name per process so command-ID deduplication in
-	// servers/fakeamps does not confuse separate spark invocations that happen
+	// servers/fakeamps does not confuse separate CLI invocations that happen
 	// to generate the same auto-incremented commandID.
 	clientName := fmt.Sprintf("gofer-%d-%d", os.Getpid(), time.Now().UnixNano())
 	client := amps.NewClient(clientName)

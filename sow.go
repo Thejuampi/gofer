@@ -18,7 +18,7 @@ func runSOW(args []string) error {
 	topic := fs.String("topic", "", "SOW topic to query")
 	filter := fs.String("filter", "", "content filter expression")
 	copyServer := fs.String("copy", "", "secondary server for mirrored output")
-	format := fs.String("format", "", "spark-style output format")
+	format := fs.String("format", "", "output format template")
 	batchSize := fs.String("batchsize", "", "query batch size")
 	orderBy := fs.String("orderby", "", "query ordering")
 	topN := fs.String("topn", "", "max records to return")

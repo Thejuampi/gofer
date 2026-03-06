@@ -58,7 +58,7 @@ func TestTransportOptionsCanonicalURIURISchemeOverridesSecure(t *testing.T) {
 	options := transportOptions{
 		server:      "localhost:9007",
 		messageType: "json",
-		secure:      sparkBool{set: true, value: true},
+		secure:      compatBool{set: true, value: true},
 		urischeme:   "tcp",
 	}
 
@@ -137,7 +137,7 @@ func TestPublishPacerWaitsForRate(t *testing.T) {
 	}
 }
 
-func TestRenderMessageUsesSparkTokens(t *testing.T) {
+func TestRenderMessageUsesFormatTokens(t *testing.T) {
 	message := amps.NewCommand("sow").
 		SetTopic("orders").
 		SetBookmark("1|1|").

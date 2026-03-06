@@ -1,9 +1,9 @@
-# Spark Parity Matrix
+# Official CLI Parity
 
 Source of truth: <https://crankuptheamps.com/docs/amps-user-guide/utilities/spark>
 
-This matrix tracks the spark-compatible surface that `gofer` intentionally implements.
-The goal is semantic, user-visible parity for the six documented spark commands.
+This matrix tracks the official `spark`-compatible surface that `gofer` intentionally implements.
+The goal is semantic, user-visible parity for the six documented `spark` commands.
 
 ## Shared Transport Flags
 
