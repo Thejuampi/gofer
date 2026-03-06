@@ -158,15 +158,21 @@ func repoRoot(t *testing.T) string {
 func ampsClientGoRoot(t *testing.T) string {
 	t.Helper()
 	root := repoRoot(t)
-	candidate := filepath.Join(root, "..", "amps-client-go")
-	abs, err := filepath.Abs(candidate)
+
+	resolve := exec.Command("go", "list", "-m", "-f", "{{.Dir}}", "github.com/Thejuampi/amps-client-go")
+	resolve.Dir = root
+	output, err := resolve.CombinedOutput()
 	if err != nil {
-		t.Fatalf("resolve amps-client-go root: %v", err)
+		t.Fatalf("resolve amps-client-go module root: %v\n%s", err, output)
 	}
-	if _, statErr := os.Stat(filepath.Join(abs, "go.mod")); statErr != nil {
-		t.Fatalf("amps-client-go repo not found at %s (expected sibling directory)", abs)
+	moduleRoot := strings.TrimSpace(string(output))
+	if moduleRoot == "" {
+		t.Fatalf("go list returned empty amps-client-go module root")
 	}
-	return abs
+	if _, statErr := os.Stat(filepath.Join(moduleRoot, "go.mod")); statErr != nil {
+		t.Fatalf("amps-client-go module root not found at %s: %v", moduleRoot, statErr)
+	}
+	return moduleRoot
 }
 
 // ---------------------------------------------------------------------------
