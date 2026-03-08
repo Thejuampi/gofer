@@ -74,7 +74,8 @@ func runPublish(args []string) error {
 		}
 	}
 
-	writeSummary("total messages published:", len(records), started)
-	flushOutput()
-	return nil
+	if err := writeSummary("total messages published:", len(records), started); err != nil {
+		return err
+	}
+	return flushOutput()
 }

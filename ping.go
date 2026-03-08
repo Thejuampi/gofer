@@ -20,7 +20,8 @@ func runPing(args []string) error {
 	}
 	defer func() { _ = client.Close() }()
 
-	fmt.Fprintf(writer, "Successfully connected to %s\n", uri)
-	flushOutput()
-	return nil
+	if _, err := fmt.Fprintf(writer, "Successfully connected to %s\n", uri); err != nil {
+		return err
+	}
+	return flushOutput()
 }

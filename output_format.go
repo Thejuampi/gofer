@@ -16,20 +16,23 @@ import (
 var writer = bufio.NewWriterSize(os.Stdout, 64*1024)
 
 // flushOutput flushes the buffered writer to stdout.
-func flushOutput() { _ = writer.Flush() }
+func flushOutput() error { return writer.Flush() }
 
-func writeLine(line string) {
-	_, _ = writer.WriteString(line)
-	_ = writer.WriteByte('\n')
+func writeLine(line string) error {
+	if _, err := writer.WriteString(line); err != nil {
+		return err
+	}
+	return writer.WriteByte('\n')
 }
 
-func writeSummary(prefix string, count int, started time.Time) {
+func writeSummary(prefix string, count int, started time.Time) error {
 	var elapsed = time.Since(started)
 	var rate = 0.0
 	if elapsed > 0 {
 		rate = float64(count) / elapsed.Seconds()
 	}
-	fmt.Fprintf(writer, "%s %d (%.2f/s)\n", prefix, count, rate)
+	_, err := fmt.Fprintf(writer, "%s %d (%.2f/s)\n", prefix, count, rate)
+	return err
 }
 
 func renderMessage(msg *amps.Message, format string, pretty bool) []byte {
@@ -56,13 +59,15 @@ func renderMessage(msg *amps.Message, format string, pretty bool) []byte {
 	return data
 }
 
-func writeMessage(msg *amps.Message, format string, pretty bool) {
+func writeMessage(msg *amps.Message, format string, pretty bool) error {
 	data := renderMessage(msg, format, pretty)
 	if len(data) == 0 {
-		return
+		return nil
 	}
-	_, _ = writer.Write(data)
-	_ = writer.WriteByte('\n')
+	if _, err := writer.Write(data); err != nil {
+		return err
+	}
+	return writer.WriteByte('\n')
 }
 
 func replaceFormatTokens(format string, msg *amps.Message) string {

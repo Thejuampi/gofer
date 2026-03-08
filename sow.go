@@ -11,7 +11,7 @@ import (
 	"github.com/Thejuampi/amps-client-go/amps"
 )
 
-func runSOW(args []string) error {
+func runSOW(args []string) (err error) {
 	fs := flag.NewFlagSet("sow", flag.ContinueOnError)
 	var transport transportOptions
 	addTransportFlags(fs, &transport, true)
@@ -37,8 +37,12 @@ func runSOW(args []string) error {
 		return err
 	}
 	defer func() {
-		flushOutput()
-		_ = client.Close()
+		if flushErr := flushOutput(); err == nil && flushErr != nil {
+			err = flushErr
+		}
+		if closeErr := client.Close(); err == nil && closeErr != nil {
+			err = closeErr
+		}
 	}()
 
 	copyClient, err := newCopyPublisher(*copyServer, transport, *timeout)
@@ -80,7 +84,9 @@ func runSOW(args []string) error {
 		cmdType, _ := msg.Command()
 		switch cmdType {
 		case amps.CommandSOW:
-			writeMessage(msg, *format, prettyVal)
+			if err := writeMessage(msg, *format, prettyVal); err != nil {
+				return err
+			}
 			if err := copyClient.Publish(*topic, msg.Data(), false); err != nil {
 				return err
 			}
@@ -105,6 +111,5 @@ func runSOW(args []string) error {
 		return fmt.Errorf("sow query timed out")
 	}
 
-	writeSummary("Total messages received:", int(count), started)
-	return nil
+	return writeSummary("Total messages received:", int(count), started)
 }

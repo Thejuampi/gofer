@@ -28,7 +28,9 @@ Run 'gofer <command> -help' for details on a specific command.
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Fprint(os.Stderr, usage)
+		if _, err := fmt.Fprint(os.Stderr, usage); err != nil {
+			os.Exit(1)
+		}
 		os.Exit(1)
 	}
 
@@ -51,15 +53,21 @@ func main() {
 	case "sow_delete":
 		err = runSOWDelete(args)
 	case "help", "-help", "--help", "-h":
-		fmt.Fprint(os.Stdout, usage)
+		if _, err = fmt.Fprint(os.Stdout, usage); err != nil {
+			os.Exit(1)
+		}
 		return
 	default:
-		fmt.Fprintf(os.Stderr, "gofer: unknown command %q\n\n%s", command, usage)
+		if _, err = fmt.Fprintf(os.Stderr, "gofer: unknown command %q\n\n%s", command, usage); err != nil {
+			os.Exit(1)
+		}
 		os.Exit(1)
 	}
 
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "gofer %s: %v\n", command, err)
+		if _, printErr := fmt.Fprintf(os.Stderr, "gofer %s: %v\n", command, err); printErr != nil {
+			os.Exit(1)
+		}
 		os.Exit(1)
 	}
 }

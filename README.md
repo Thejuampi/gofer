@@ -83,8 +83,19 @@ repos/
 
 cd gofer
 make build          # produces ./gofer (or gofer.exe on Windows)
+make static-scan    # vet + staticcheck correctness checks + ineffassign
+make test-race      # race-detector pass over the CLI integration suite
+make vuln-scan      # advisory govulncheck run against the current toolchain
 make test           # integration tests (requires fakeamps from amps-client-go)
 ```
+
+Static analysis is enforced in CI with `make static-scan`, which now includes `errcheck` in addition to vet, staticcheck correctness checks, and ineffassign.
+
+Race coverage is enforced with `make test-race` in CI and release validation.
+
+`make vuln-scan` runs `govulncheck` as an advisory scan. Its output is toolchain-sensitive for standard-library advisories, so CI records it without making it a merge blocker.
+
+GitHub CodeQL also runs a separate `security-and-quality` code-scanning workflow on pull requests and scheduled scans.
 
 ---
 

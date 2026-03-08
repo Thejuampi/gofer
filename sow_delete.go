@@ -60,7 +60,8 @@ func runSOWDelete(args []string) error {
 		}
 	}
 
-	fmt.Fprintf(writer, "deleted %d records in %v\n", deleted, time.Since(started).Round(time.Millisecond))
-	flushOutput()
-	return nil
+	if _, err := fmt.Fprintf(writer, "deleted %d records in %v\n", deleted, time.Since(started).Round(time.Millisecond)); err != nil {
+		return err
+	}
+	return flushOutput()
 }
