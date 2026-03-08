@@ -41,14 +41,21 @@ jobs:
             exit 1
           fi
 
-      - name: Go vet
-        run: go vet ./...
+      - name: Static analysis
+        run: make static-scan
+
+      - name: Race tests
+        run: make test-race
 
       - name: Build
         run: go build ./...
 
       - name: Integration tests
         run: go test -count=1 -timeout 120s .
+
+      - name: Vulnerability scan (advisory)
+        continue-on-error: true
+        run: make vuln-scan
 
   build-binaries:
     needs: validate

@@ -12,7 +12,7 @@ import (
 	"github.com/Thejuampi/amps-client-go/amps"
 )
 
-func runSOWAndSubscribe(args []string) error {
+func runSOWAndSubscribe(args []string) (err error) {
 	fs := flag.NewFlagSet("sow_and_subscribe", flag.ContinueOnError)
 	var transport transportOptions
 	addTransportFlags(fs, &transport, true)
@@ -40,8 +40,12 @@ func runSOWAndSubscribe(args []string) error {
 		return err
 	}
 	defer func() {
-		flushOutput()
-		_ = client.Close()
+		if flushErr := flushOutput(); err == nil && flushErr != nil {
+			err = flushErr
+		}
+		if closeErr := client.Close(); err == nil && closeErr != nil {
+			err = closeErr
+		}
 	}()
 
 	copyClient, err := newCopyPublisher(*copyServer, transport, *timeout)
@@ -90,7 +94,9 @@ func runSOWAndSubscribe(args []string) error {
 		cmdType, _ := msg.Command()
 		switch cmdType {
 		case amps.CommandSOW, amps.CommandPublish:
-			writeMessage(msg, *format, prettyVal)
+			if err := writeMessage(msg, *format, prettyVal); err != nil {
+				return err
+			}
 			if err := copyClient.Publish(*topic, msg.Data(), *delta); err != nil {
 				return err
 			}
